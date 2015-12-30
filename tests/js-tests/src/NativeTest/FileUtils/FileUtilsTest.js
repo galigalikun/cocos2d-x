@@ -1,8 +1,7 @@
 /****************************************************************************
- Copyright (c) 2008-2010 Ricardo Quesada
- Copyright (c) 2011-2012 cocos2d-x.org
- Copyright (c) 2013-2014 Chukong Technologies Inc.
+ Copyright (c) 2015 Chukong Technologies Inc.
 
+ http://www.cocos2d-x.org
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -48,17 +47,17 @@ var fileUtilsBase = BaseTestLayer.extend({
         new NativeTestScene().runThisTest();
     },
     onRestartCallback:function (sender) {
-        var s = new FileUtilsScene();
+        var s = new cc.Scene();
         s.addChild(restartfileUtils());
         director.runScene(s);
     },
     onNextCallback:function (sender) {
-        var s = new FileUtilsScene();
+        var s = new cc.Scene();
         s.addChild(nextfileUtils());
         director.runScene(s);
     },
     onBackCallback:function (sender) {
-        var s = new FileUtilsScene();
+        var s = new cc.Scene();
         s.addChild(previousfileUtils());
         director.runScene(s);
     },
@@ -71,6 +70,71 @@ var fileUtilsBase = BaseTestLayer.extend({
         return fileUtilsSceneIdx;
     }
 
+});
+
+var TestWriteData = fileUtilsBase.extend({
+    _title:"fileUtils: TestWriteData(Binary) to files",
+    ctor:function() {
+        this._super();
+
+        var winSize = cc.winSize;
+
+        var writeResult = new cc.LabelTTF("", "Arial", 18);
+        this.addChild(writeResult);
+        writeResult.setPosition(winSize.width / 2, winSize.height * 3 / 4);
+
+        var readResult = new cc.LabelTTF("", "Arial", 18);
+        this.addChild(readResult);
+        readResult.setPosition(winSize.width / 2, winSize.height  / 3);
+
+        var writablePath = jsb.fileUtils.getWritablePath();
+        writablePath += "cocos/fileUtilTest/";
+        var fileName = "writeDataTest.bin";
+        var fullPath = writablePath + fileName;
+
+        // writeTest
+        var writeData = new Uint8Array(8);
+        for(var i = 0; i < writeData.length; i ++) {
+            writeData[i] = i;
+        }
+        jsb.fileUtils.createDirectory(writablePath);
+        if (jsb.fileUtils.writeDataToFile(writeData, fullPath))
+        {
+            log("see the file at %s", fullPath);
+            writeResult.setString("write success:\n" + fullPath);
+        }
+        else
+        {
+            log("write file failed");
+            writeResult.setString("write fail");
+        }
+
+        // readTest
+        var readData = jsb.fileUtils.getDataFromFile(fullPath);
+        if(!readData || typeof readData != typeof writeData) {
+            log("read file failed");
+            readResult.setString("read failed");
+        } else {
+            var match = true;
+            if(readData.length != writeData.length){
+                log("data size not match");
+                match = false;
+            } else {
+                for(var i = 0; i < readData.length; i ++) {
+                    if(readData[i] != writeData[i]) {
+                        log("data not match");
+                        match = false;
+                        break;
+                    }
+                }
+            }
+            if(!match) {
+                readResult.setString("read success, but data not correct");
+            } else {
+                readResult.setString("read test success");
+            }
+        }
+    },
 });
 
 var TestWriteString = fileUtilsBase.extend({
@@ -302,6 +366,7 @@ var TestWriteValueVector = fileUtilsBase.extend({
     },
 });
 var arrayOffileUtils = [
+    TestWriteData,
     TestWriteString,
     TestWriteValueMap,
     TestWriteValueVector
@@ -324,16 +389,10 @@ var restartfileUtils = function () {
     return new arrayOffileUtils[fileUtilsSceneIdx]();
 };
 
-var FileUtilsScene = cc.Scene.extend({
-    ctor:function() {
-        this._super();
-    }
-});
-
 var startFileUtilsTest = function()
 {
     fileUtilsSceneIdx = 0;
-    var s = new FileUtilsScene();
+    var s = new cc.Scene();
     s.addChild(restartfileUtils());
     director.runScene(s);
 }

@@ -201,11 +201,27 @@ void Menu::addChild(Node * child, int zOrder, const std::string &name)
 
 void Menu::onEnter()
 {
+#if CC_ENABLE_SCRIPT_BINDING
+    if (_scriptType == kScriptTypeJavascript)
+    {
+        if (ScriptEngineManager::sendNodeEventToJSExtended(this, kNodeOnEnter))
+            return;
+    }
+#endif
+    
     Layer::onEnter();
 }
 
 void Menu::onExit()
 {
+#if CC_ENABLE_SCRIPT_BINDING
+    if (_scriptType == kScriptTypeJavascript)
+    {
+        if (ScriptEngineManager::sendNodeEventToJSExtended(this, kNodeOnExit))
+            return;
+    }
+#endif
+    
     if (_state == Menu::State::TRACKING_TOUCH)
     {
         if (_selectedItem)
@@ -237,7 +253,8 @@ void Menu::removeChild(Node* child, bool cleanup)
 
 bool Menu::onTouchBegan(Touch* touch, Event* event)
 {
-    if (_state != Menu::State::WAITING || ! _visible || !_enabled)
+    auto camera = Camera::getVisitingCamera();
+    if (_state != Menu::State::WAITING || ! _visible || !_enabled || !camera)
     {
         return false;
     }
@@ -250,10 +267,11 @@ bool Menu::onTouchBegan(Touch* touch, Event* event)
         }
     }
     
-    _selectedItem = this->getItemForTouch(touch);
+    _selectedItem = this->getItemForTouch(touch, camera);
     if (_selectedItem)
     {
         _state = Menu::State::TRACKING_TOUCH;
+        _selectedWithCamera = camera;
         _selectedItem->selected();
         
         return true;
@@ -272,6 +290,7 @@ void Menu::onTouchEnded(Touch* touch, Event* event)
         _selectedItem->activate();
     }
     _state = Menu::State::WAITING;
+    _selectedWithCamera = nullptr;
     this->release();
 }
 
@@ -290,7 +309,7 @@ void Menu::onTouchCancelled(Touch* touch, Event* event)
 void Menu::onTouchMoved(Touch* touch, Event* event)
 {
     CCASSERT(_state == Menu::State::TRACKING_TOUCH, "[Menu ccTouchMoved] -- invalid state");
-    MenuItem *currentItem = this->getItemForTouch(touch);
+    MenuItem *currentItem = this->getItemForTouch(touch, _selectedWithCamera);
     if (currentItem != _selectedItem)
     {
         if (_selectedItem)
@@ -537,12 +556,10 @@ void Menu::alignItemsInRowsWithArray(const ValueVector& columns)
     }
 }
 
-MenuItem* Menu::getItemForTouch(Touch *touch)
+MenuItem* Menu::getItemForTouch(Touch *touch, const Camera *camera)
 {
     Vec2 touchLocation = touch->getLocation();
-    auto camera = Camera::getVisitingCamera();
-    
-    if (!_children.empty() && nullptr != camera)
+    if (!_children.empty())
     {
         for (auto iter = _children.crbegin(); iter != _children.crend(); ++iter)
         {

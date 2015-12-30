@@ -299,7 +299,7 @@ _useTouchArea(false),
 _textFieldEventListener(nullptr),
 _textFieldEventSelector(nullptr),
 _eventCallback(nullptr),
-_passwordStyleText(""),
+_passwordStyleText("*"),
 _textFieldRendererAdaptDirty(true),
 _fontName("Thonburi"),
 _fontSize(10),
@@ -388,7 +388,9 @@ bool TextField::hitTest(const Vec2 &pt, const Camera* camera, Vec3 *p) const
         return Widget::hitTest(pt, camera, nullptr);
     }
 
-    Rect rect(0, 0, _touchWidth, _touchHeight);
+    auto size = getContentSize();
+    auto anch = getAnchorPoint();
+    Rect rect((size.width - _touchWidth) * anch.x, (size.height - _touchHeight) * anch.y, _touchWidth, _touchHeight);
     return isScreenPointInRect(pt, camera, getWorldToNodeTransform(), rect, nullptr);
 }
 
@@ -405,8 +407,7 @@ void TextField::setString(const std::string& text)
     {
         int max = _textFieldRenderer->getMaxLength();
         long text_count = StringUtils::getCharacterCountInUTF8String(text);
-        long total = text_count + StringUtils::getCharacterCountInUTF8String(getString());
-        if (total > max)
+        if (text_count > max)
         {
             strText = Helper::getSubStringOfUTF8String(strText, 0, max);
         }
@@ -535,6 +536,11 @@ bool TextField::onTouchBegan(Touch *touch, Event *unusedEvent)
     bool pass = Widget::onTouchBegan(touch, unusedEvent);
     if (_hitted)
     {
+        if (isFocusEnabled())
+        {
+            requestFocus();
+        }
+
         _textFieldRenderer->attachWithIME();
     }
     else
@@ -569,6 +575,8 @@ int TextField::getMaxLength()const
 void TextField::setPasswordEnabled(bool enable)
 {
     _textFieldRenderer->setPasswordEnabled(enable);
+    if (enable)
+        setPasswordStyleText(getPasswordStyleText());
 }
 
 bool TextField::isPasswordEnabled()const
@@ -602,7 +610,16 @@ void TextField::update(float dt)
         attachWithIMEEvent();
         setAttachWithIME(false);
     }
-    
+
+    if (getDeleteBackward())
+    {
+        _textFieldRendererAdaptDirty = true;
+        updateContentSizeWithTextureSize(_textFieldRenderer->getContentSize());
+
+        deleteBackwardEvent();
+        setDeleteBackward(false);
+    }
+
     if (getInsertText())
     {
         //we update the content size first such that when user call getContentSize() in event callback won't be wrong
@@ -611,15 +628,6 @@ void TextField::update(float dt)
         
         insertTextEvent();
         setInsertText(false);
-    }
-    
-    if (getDeleteBackward())
-    {
-        _textFieldRendererAdaptDirty = true;
-        updateContentSizeWithTextureSize(_textFieldRenderer->getContentSize());
-        
-        deleteBackwardEvent();
-        setDeleteBackward(false);
     }
 }
 

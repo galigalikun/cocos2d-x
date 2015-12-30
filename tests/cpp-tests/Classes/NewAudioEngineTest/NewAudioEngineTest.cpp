@@ -23,8 +23,6 @@
  ****************************************************************************/
 
 #include "platform/CCPlatformConfig.h"
-#if CC_TARGET_PLATFORM == CC_PLATFORM_WINRT || CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID || CC_TARGET_PLATFORM == CC_PLATFORM_IOS || CC_TARGET_PLATFORM == CC_PLATFORM_MAC || CC_TARGET_PLATFORM == CC_PLATFORM_WIN32
-
 #include "NewAudioEngineTest.h"
 #include "ui/CocosGUI.h"
 
@@ -34,7 +32,9 @@ using namespace cocos2d::experimental;
 
 AudioEngineTests::AudioEngineTests()
 {
+    ADD_TEST_CASE(AudioIssue11143Test);
     ADD_TEST_CASE(AudioControlTest);
+    ADD_TEST_CASE(AudioLoadTest);
     ADD_TEST_CASE(PlaySimultaneouslyTest);
     ADD_TEST_CASE(AudioProfileTest);
     ADD_TEST_CASE(InvalidAudioFileTest);
@@ -143,23 +143,14 @@ namespace {
     class SliderEx : public Slider
     {
     public:
-        enum class TouchEvent
-        {
-            DOWN,
-            MOVE,
-            UP,
-            CANCEL
-        };
-        typedef std::function<void(SliderEx*,float,TouchEvent)> ccSliderExCallback;
-        
         static SliderEx* create(){
             auto ret = new (std::nothrow) SliderEx();
             if (ret && ret->init())
             {
-                ret->_callback = nullptr;
                 ret->loadBarTexture("cocosui/sliderTrack.png");
                 ret->loadSlidBallTextures("cocosui/sliderThumb.png", "cocosui/sliderThumb.png", "");
                 ret->loadProgressBarTexture("cocosui/sliderProgress.png");
+                ret->setTouchEnabled(true);
                 
                 ret->autorelease();
                 
@@ -169,94 +160,20 @@ namespace {
             return ret;
         }
         
-        void setCallBack(const ccSliderExCallback& callback){
-            _callback = callback;
-        }
-        
         void setRatio(float ratio) {
-            if (ratio > 1.0f){
-                ratio = 1.0f;
-            }
-            else if (ratio < 0.0f){
-                ratio = 0.0f;
-            }
+            ratio = clampf(ratio, 0.0f, 1.0f);
             
             _ratio = ratio;
-            _percent = 100 * _ratio;
-            
-            float dis = _barLength * _ratio;
-            _slidBallRenderer->setPosition(Vec2(dis, _contentSize.height / 2.0f));
-            if (_scale9Enabled){
-                _progressBarRenderer->setPreferredSize(Size(dis,_progressBarTextureSize.height));
-            }
-            else
-            {
-                auto spriteRenderer = _progressBarRenderer->getSprite();
-                
-                if (nullptr != spriteRenderer) {
-                    Rect rect = spriteRenderer->getTextureRect();
-                    rect.size.width = _progressBarTextureSize.width * _ratio;
-                    spriteRenderer->setTextureRect(rect, spriteRenderer->isTextureRectRotated(), rect.size);
-                }
-            }
+            setPercent(100 * _ratio);
         }
         
-        virtual bool onTouchBegan(Touch *touch, Event *unusedEvent) override{
-            auto ret = Slider::onTouchBegan(touch, unusedEvent);
-            if(ret && _callback){
-                _touchEvent = TouchEvent::DOWN;
-                Vec2 nsp = convertToNodeSpace(_touchBeganPosition);
-                _ratio = nsp.x / _barLength;
-                if(_ratio < 0.0f)
-                    _ratio = 0.0f;
-                else if(_ratio > 1.0f)
-                    _ratio = 1.0f;
-                _callback(this,_ratio,_touchEvent);
-            }
-            return ret;
-        }
-        
-        virtual void onTouchMoved(Touch *touch, Event *unusedEvent) override{
-            _touchEvent = TouchEvent::MOVE;
-            Slider::onTouchMoved(touch, unusedEvent);
-            Vec2 nsp = convertToNodeSpace(_touchMovePosition);
-            _ratio = nsp.x / _barLength;
-            if(_ratio < 0.0f)
-                _ratio = 0.0f;
-            else if(_ratio > 1.0f)
-                _ratio = 1.0f;
-            if(_callback){
-                _callback(this,_ratio,_touchEvent);
-            }
-        }
-        
-        virtual void onTouchEnded(Touch *touch, Event *unusedEvent) override{
-            _touchEvent = TouchEvent::UP;
-            Slider::onTouchEnded(touch, unusedEvent);
-            Vec2 nsp = convertToNodeSpace(_touchEndPosition);
-            _ratio = nsp.x / _barLength;
-            if(_ratio < 0.0f)
-                _ratio = 0.0f;
-            else if(_ratio > 1.0f)
-                _ratio = 1.0f;
-            if(_callback){
-                _callback(this,_ratio,_touchEvent);
-            }
-        }
-        
-        virtual void onTouchCancelled(Touch *touch, Event *unusedEvent) override{
-            _touchEvent = TouchEvent::CANCEL;
-            Slider::onTouchCancelled(touch, unusedEvent);
-            
-            if(_callback){
-                _callback(this,_ratio,_touchEvent);
-            }
+        float getRatio () {
+            _ratio = 1.0f * _percent / _maxPercent;
+            return _ratio;
         }
         
     private:
-        TouchEvent _touchEvent;
         float _ratio;
-        ccSliderExCallback _callback;
     };
 }
 
@@ -349,25 +266,11 @@ bool AudioControlTest::init()
     loopItem->setPosition(layerSize.width * 0.5f, layerSize.height * 0.5f);
     addChild(loopItem);
     
-    auto preloadItem = TextButton::create("preload", [&](TextButton* button){
-        AudioEngine::preload("background.mp3");
-    });
-    preloadItem->setPosition(layerSize.width * 0.3f, layerSize.height * 0.6f);
-    addChild(preloadItem);
-
-    auto uncacheItem = TextButton::create("uncache", [&](TextButton* button){
-        AudioEngine::uncache("background.mp3");
-        
-        _audioID = AudioEngine::INVALID_AUDIO_ID;
-        ((TextButton*)_playItem)->setEnabled(true);
-    });
-    uncacheItem->setPosition(layerSize.width * 0.7f,layerSize.height * 0.6f);
-    addChild(uncacheItem);
-    
     auto volumeSlider = SliderEx::create();
     volumeSlider->setPercent(100);
-    volumeSlider->setCallBack([&](SliderEx* sender,float ratio,SliderEx::TouchEvent event){
-        _volume = ratio;
+    volumeSlider->addEventListener([&](Ref* sender, Slider::EventType event){
+        SliderEx *slider = dynamic_cast<SliderEx *>(sender);
+        _volume = slider->getRatio();
         if (_audioID != AudioEngine::INVALID_AUDIO_ID ) {
             AudioEngine::setVolume(_audioID, _volume);
         }
@@ -376,17 +279,20 @@ bool AudioControlTest::init()
     addChild(volumeSlider);
     
     auto timeSlider = SliderEx::create();
-    timeSlider->setCallBack([&](SliderEx* sender,float ratio,SliderEx::TouchEvent event){
+    timeSlider->addEventListener([&](Ref* sender, Slider::EventType event){
+        SliderEx *slider = dynamic_cast<SliderEx *>(sender);
         switch(event){
-            case SliderEx::TouchEvent::MOVE:
-            case SliderEx::TouchEvent::DOWN:
+            case Slider::EventType::ON_PERCENTAGE_CHANGED:
+            case Slider::EventType::ON_SLIDEBALL_DOWN:
                 _updateTimeSlider = false;
                 break;
-            case SliderEx::TouchEvent::UP:
+            case Slider::EventType::ON_SLIDEBALL_UP:
                 if (_audioID != AudioEngine::INVALID_AUDIO_ID && _duration != AudioEngine::TIME_UNKNOWN) {
-                    AudioEngine::setCurrentTime(_audioID,_duration * ratio);
+                    float ratio = (float)slider->getPercent() / 100;
+                    ratio = clampf(ratio, 0.0f, 1.0f);
+                    AudioEngine::setCurrentTime(_audioID, _duration * ratio);
                 }
-            case SliderEx::TouchEvent::CANCEL:
+            case Slider::EventType::ON_SLIDEBALL_CANCEL:
                 _updateTimeSlider = true;
                 break;
         }
@@ -435,8 +341,53 @@ AudioControlTest::~AudioControlTest()
 
 std::string AudioControlTest::title() const
 {
-    return "audio control test";
+    return "Audio control test";
 }
+
+bool AudioLoadTest::init()
+{
+    if (AudioEngineTestDemo::init())
+    {
+        auto& layerSize = this->getContentSize();
+
+        auto stateLabel = Label::createWithTTF("status:", "fonts/arial.ttf", 30);
+        stateLabel->setPosition(layerSize.width / 2, layerSize.height * 0.7f);
+        addChild(stateLabel);
+
+        auto preloadItem = TextButton::create("preload", [&, stateLabel](TextButton* button){
+            stateLabel->setString("status:loading...");
+            AudioEngine::preload("audio/SoundEffectsFX009/FX082.mp3", [stateLabel](bool isSuccess){
+                if (isSuccess)
+                {
+                    stateLabel->setString("status:load success");
+                }
+                else
+                {
+                    stateLabel->setString("status:load fail");
+                }
+            });
+        });
+        preloadItem->setPosition(layerSize.width * 0.35f, layerSize.height * 0.5f);
+        addChild(preloadItem);
+
+        auto uncacheItem = TextButton::create("uncache", [&, stateLabel](TextButton* button){
+            stateLabel->setString("status:uncache");
+            AudioEngine::uncache("audio/SoundEffectsFX009/FX082.mp3");
+        });
+        uncacheItem->setPosition(layerSize.width * 0.65f, layerSize.height * 0.5f);
+        addChild(uncacheItem);
+        
+        return true;
+    }
+
+    return false;
+}
+
+std::string AudioLoadTest::title() const
+{
+    return "Audio preload/uncache test";
+}
+
 
 // PlaySimultaneouslyTest
 bool PlaySimultaneouslyTest::init()
@@ -650,4 +601,35 @@ std::string LargeAudioFileTest::title() const
     return "Test large audio file";
 }
 
-#endif
+bool AudioIssue11143Test::init()
+{
+    if (AudioEngineTestDemo::init())
+    {
+        auto& layerSize = this->getContentSize();
+
+        auto playItem = TextButton::create("play", [](TextButton* button){
+            auto audioId = AudioEngine::play2d("audio/SoundEffectsFX009/FX082.mp3", true);
+            button->scheduleOnce([audioId](float dt){
+                AudioEngine::stop(audioId);
+                AudioEngine::play2d("audio/SoundEffectsFX009/FX083.mp3");
+            }, 2.f, "play another sound");
+        });
+        playItem->setPosition(layerSize.width * 0.5f, layerSize.height * 0.5f);
+        addChild(playItem);
+
+        return true;
+    }
+
+    return false;
+}
+
+std::string AudioIssue11143Test::title() const
+{
+    return "Test for issue 11143";
+}
+
+std::string AudioIssue11143Test::subtitle() const
+{
+    return "2 seconds after first sound play,you should hear another sound.";
+}
+

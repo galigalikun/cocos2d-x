@@ -726,11 +726,11 @@ unsigned char* FileUtils::getFileDataFromZip(const std::string& zipFilePath, con
         CC_BREAK_IF(!file);
 
         // FIXME: Other platforms should use upstream minizip like mingw-w64
-        #ifdef MINIZIP_FROM_SYSTEM
+#ifdef MINIZIP_FROM_SYSTEM
         int ret = unzLocateFile(file, filename.c_str(), NULL);
-        #else
+#else
         int ret = unzLocateFile(file, filename.c_str(), 1);
-        #endif
+#endif
         CC_BREAK_IF(UNZ_OK != ret);
 
         char filePathA[260];
@@ -827,7 +827,7 @@ std::string FileUtils::fullPathForFilename(const std::string &filename) const
         {
             fullpath = this->getPathForFilename(newFilename, resolutionIt, searchIt);
 
-            if (fullpath.length() > 0)
+            if (!fullpath.empty())
             {
                 // Using the filename passed in as key.
                 _fullPathCache.insert(std::make_pair(filename, fullpath));
@@ -926,7 +926,7 @@ void FileUtils::setSearchPaths(const std::vector<std::string>& searchPaths)
             prefix = _defaultResRootPath;
         }
         path = prefix + (iter);
-        if (path.length() > 0 && path[path.length()-1] != '/')
+        if (!path.empty() && path[path.length()-1] != '/')
         {
             path += "/";
         }
@@ -951,7 +951,7 @@ void FileUtils::addSearchPath(const std::string &searchpath,const bool front)
         prefix = _defaultResRootPath;
 
     std::string path = prefix + searchpath;
-    if (path.length() > 0 && path[path.length()-1] != '/')
+    if (!path.empty() && path[path.length()-1] != '/')
     {
         path += "/";
     }
@@ -971,7 +971,7 @@ void FileUtils::setFilenameLookupDictionary(const ValueMap& filenameLookupDict)
 void FileUtils::loadFilenameLookupDictionaryFromFile(const std::string &filename)
 {
     const std::string fullPath = fullPathForFilename(filename);
-    if (fullPath.length() > 0)
+    if (!fullPath.empty())
     {
         ValueMap dict = FileUtils::getInstance()->getValueMapFromFile(fullPath);
         if (!dict.empty())
@@ -1084,6 +1084,12 @@ bool FileUtils::removeFile(const std::string &path)
     return false;
 }
 
+bool FileUtils::renameFile(const std::string &oldfullpath, const std::string& newfullpath)
+{
+    CCASSERT(false, "FileUtils not support renameFile");
+    return false;
+}
+
 bool FileUtils::renameFile(const std::string &path, const std::string &oldname, const std::string &name)
 {
     CCASSERT(false, "FileUtils not support renameFile");
@@ -1094,6 +1100,12 @@ std::string FileUtils::getSuitableFOpen(const std::string& filenameUtf8) const
 {
     CCASSERT(false, "getSuitableFOpen should be override by platform FileUtils");
     return filenameUtf8;
+}
+
+long FileUtils::getFileSize(const std::string &filepath)
+{
+    CCASSERT(false, "getFileSize should be override by platform FileUtils");
+    return 0;
 }
 
 #else
@@ -1177,9 +1189,14 @@ bool FileUtils::createDirectory(const std::string& path)
 
 bool FileUtils::removeDirectory(const std::string& path)
 {
+    // FIXME: Why using subclassing? an interface probably will be better
+    // to support different OS
+    // FileUtils::removeDirectory is subclassed on iOS/tvOS
+    // and system() is not available on tvOS
+#if !defined(CC_PLATFORM_IOS)
     if (path.size() > 0 && path[path.size() - 1] != '/')
     {
-        CCLOGERROR("Fail to remove directory, path must termniate with '/': %s", path.c_str());
+        CCLOGERROR("Fail to remove directory, path must terminate with '/': %s", path.c_str());
         return false;
     }
 
@@ -1189,6 +1206,7 @@ bool FileUtils::removeDirectory(const std::string& path)
     if (system(command.c_str()) >= 0)
         return true;
     else
+#endif
         return false;
 }
 
@@ -1201,20 +1219,28 @@ bool FileUtils::removeFile(const std::string &path)
     }
 }
 
+bool FileUtils::renameFile(const std::string &oldfullpath, const std::string &newfullpath)
+{
+    CCASSERT(!oldfullpath.empty(), "Invalid path");
+    CCASSERT(!newfullpath.empty(), "Invalid path");
+
+    int errorCode = rename(oldfullpath.c_str(), newfullpath.c_str());
+
+    if (0 != errorCode)
+    {
+        CCLOGERROR("Fail to rename file %s to %s !Error code is %d", oldfullpath.c_str(), newfullpath.c_str(), errorCode);
+        return false;
+    }
+    return true;
+}
+
 bool FileUtils::renameFile(const std::string &path, const std::string &oldname, const std::string &name)
 {
     CCASSERT(!path.empty(), "Invalid path");
     std::string oldPath = path + oldname;
     std::string newPath = path + name;
 
-    int errorCode = rename(oldPath.c_str(), newPath.c_str());
-
-    if (0 != errorCode)
-    {
-        CCLOGERROR("Fail to rename file %s to %s !Error code is %d", oldPath.c_str(), newPath.c_str(), errorCode);
-        return false;
-    }
-    return true;
+    return this->renameFile(oldPath, newPath);
 }
 
 std::string FileUtils::getSuitableFOpen(const std::string& filenameUtf8) const
@@ -1222,7 +1248,6 @@ std::string FileUtils::getSuitableFOpen(const std::string& filenameUtf8) const
     return filenameUtf8;
 }
 
-#endif
 
 long FileUtils::getFileSize(const std::string &filepath)
 {
@@ -1238,10 +1263,10 @@ long FileUtils::getFileSize(const std::string &filepath)
 
     struct stat info;
     // Get data associated with "crt_stat.c":
-    int result = stat( fullpath.c_str(), &info );
+    int result = stat(fullpath.c_str(), &info);
 
     // Check if statistics are valid:
-    if( result != 0 )
+    if (result != 0)
     {
         // Failed
         return -1;
@@ -1251,6 +1276,7 @@ long FileUtils::getFileSize(const std::string &filepath)
         return (long)(info.st_size);
     }
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Notification support when getFileData from invalid file path.
@@ -1265,6 +1291,20 @@ void FileUtils::setPopupNotify(bool notify)
 bool FileUtils::isPopupNotify() const
 {
     return s_popupNotify;
+}
+
+std::string FileUtils::getFileExtension(const std::string& filePath) const
+{
+    std::string fileExtension;
+    size_t pos = filePath.find_last_of('.');
+    if (pos != std::string::npos)
+    {
+        fileExtension = filePath.substr(pos, filePath.length());
+
+        std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), ::tolower);
+    }
+
+    return fileExtension;
 }
 
 NS_CC_END

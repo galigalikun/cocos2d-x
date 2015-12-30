@@ -26,7 +26,7 @@
 
 // CCConfig.js
 //
-cc.ENGINE_VERSION = "Cocos2d-JS v3.7";
+cc.ENGINE_VERSION = "Cocos2d-JS v3.10";
 
 cc.FIX_ARTIFACTS_BY_STRECHING_TEXEL = 0;
 cc.DIRECTOR_STATS_POSITION = {x: 0, y: 0};
@@ -1276,49 +1276,6 @@ cc.defineGetterSetter(_proto, "ORANGE", _proto._getOrange);
 _proto.GRAY;
 cc.defineGetterSetter(_proto, "GRAY", _proto._getGray);
 
-// Extends
-cc.Node.extend = cc.Class.extend;
-cc.AtlasNode.extend = cc.Class.extend;
-cc.Layer.extend = cc.Class.extend;
-cc.LayerGradient.extend = cc.Class.extend;
-cc.LayerColor.extend = cc.Class.extend;
-cc.LayerMultiplex.extend = cc.Class.extend;
-cc.Sprite.extend = cc.Class.extend;
-cc.SpriteBatchNode.extend = cc.Class.extend;
-cc.SpriteFrame.extend = cc.Class.extend;
-cc.LabelTTF.extend = cc.Class.extend;
-cc.LabelBMFont.extend = cc.Class.extend;
-cc.LabelAtlas.extend = cc.Class.extend;
-cc.Menu.extend = cc.Class.extend;
-cc.MenuItem.extend = cc.Class.extend;
-cc.MenuItemLabel.extend = cc.Class.extend;
-cc.MenuItemFont.extend = cc.Class.extend;
-cc.MenuItemAtlasFont.extend = cc.Class.extend;
-cc.MenuItemSprite.extend = cc.Class.extend;
-cc.MenuItemImage.extend = cc.Class.extend;
-cc.MenuItemToggle.extend = cc.Class.extend;
-cc.Scene.extend = cc.Class.extend;
-cc.ClippingNode.extend = cc.Class.extend;
-cc.ProgressTimer.extend = cc.Class.extend;
-cc.ParallaxNode.extend = cc.Class.extend;
-cc.DrawNode.extend = cc.Class.extend;
-cc.Component.extend = cc.Class.extend;
-cc.GridBase.extend = cc.Class.extend;
-cc.Grid3D.extend = cc.Class.extend;
-cc.TiledGrid3D.extend = cc.Class.extend;
-cc.MotionStreak.extend = cc.Class.extend;
-cc.ParticleBatchNode.extend = cc.Class.extend;
-cc.ParticleSystem.extend = cc.Class.extend;
-cc.TextFieldTTF.extend = cc.Class.extend;
-cc.RenderTexture.extend = cc.Class.extend;
-cc.TileMapAtlas.extend = cc.Class.extend;
-cc.TMXLayer.extend = cc.Class.extend;
-cc.TMXTiledMap.extend = cc.Class.extend;
-cc.TMXMapInfo.extend = cc.Class.extend;
-cc.TransitionScene.extend = cc.Class.extend;
-cc.GLProgram.extend = cc.Class.extend;
-
-
 // Cocos2d-html5 supports multi scene resources preloading.
 // This is a compatible function for JSB.
 cc.Loader = cc.Class.extend({
@@ -1634,7 +1591,9 @@ cc.Touch.prototype.getLocationY = function(){
 cc.Director.EVENT_PROJECTION_CHANGED = "director_projection_changed";
 cc.Director.EVENT_AFTER_DRAW = "director_after_draw";
 cc.Director.EVENT_AFTER_VISIT = "director_after_visit";
+cc.Director.EVENT_BEFORE_UPDATE = "director_before_update";
 cc.Director.EVENT_AFTER_UPDATE = "director_after_update";
+cc.Director.EVENT_BEFORE_SCENE_LAUNCH = "director_before_scene_launch";
 
 cc.Director.prototype.runScene = function(scene){
     if (!this.getRunningScene()) {
@@ -1817,6 +1776,9 @@ cc.cardinalSplineAt = function (p0, p1, p2, p3, tension, t) {
 };
 
 cc._DrawNode = cc.DrawNode;
+cc._DrawNode.prototype.drawPoly = function (verts, fillColor, borderWidth, borderColor) {
+    cc._DrawNode.prototype.drawPolygon.call(this, verts, verts.length, fillColor, borderWidth, borderColor);
+}
 cc.DrawNode = cc._DrawNode.extend({
     _drawColor: cc.color(255, 255, 255, 255),
     _lineWidth: 1,
@@ -2483,6 +2445,26 @@ cc.affineTransformConcat = function (t1, t2) {
 };
 
 /**
+ * Concatenate a transform matrix to another<br/>
+ * The results are reflected in the first matrix.<br/>
+ * t' = t1 * t2
+ * @function
+ * @param {cc.AffineTransform} t1 The first transform object
+ * @param {cc.AffineTransform} t2 The transform object to concatenate
+ * @return {cc.AffineTransform} The result of concatenation
+ */
+cc.affineTransformConcatIn = function (t1, t2) {
+    var a = t1.a, b = t1.b, c = t1.c, d = t1.d, tx = t1.tx, ty = t1.ty;
+    t1.a = a * t2.a + b * t2.c;
+    t1.b = a * t2.b + b * t2.d;
+    t1.c = c * t2.a + d * t2.c;
+    t1.d = c * t2.b + d * t2.d;
+    t1.tx = tx * t2.a + ty * t2.c + t2.tx;
+    t1.ty = tx * t2.b + ty * t2.d + t2.ty;
+    return t1;
+};
+
+/**
  * Return true if `t1' and `t2' are equal, false otherwise.
  * @memberOf cc
  * @function
@@ -2617,6 +2599,13 @@ cc.Texture2D.prototype.setTexParameters = function (texParams, magFilter, wrapS,
 
 cc.Texture2D.prototype.handleLoadedTexture = function (premultipled) {};
 
+// 
+// MenuItem setCallback support target
+//
+cc.MenuItem.prototype._setCallback = cc.MenuItem.prototype.setCallback;
+cc.MenuItem.prototype.setCallback = function (callback, target) {
+    this._setCallback(callback.bind(target));
+};
 
 //
 // MenuItemImage support sprite frame name as paramter
@@ -2645,7 +2634,7 @@ cc.MenuItemToggle.prototype.selectedItem = cc.MenuItemToggle.prototype.getSelect
 
 
 //
-// LabelTTF setDimensions support two parameters
+// LabelTTF API wrappers
 //
 cc.LabelTTF.prototype._setDimensions = cc.LabelTTF.prototype.setDimensions;
 cc.LabelTTF.prototype.setDimensions = function (dim, height) {
@@ -2654,6 +2643,14 @@ cc.LabelTTF.prototype.setDimensions = function (dim, height) {
     }
     this._setDimensions(dim);
 };
+
+cc.LabelTTF.prototype._enableShadow = cc.LabelTTF.prototype.enableShadow;
+cc.LabelTTF.prototype.enableShadow = function (shadowColor, offset, blurRadius) {
+    var opacity = 1;
+    this._enableShadow(offset, opacity, blurRadius);
+}
+
+cc.LabelTTF.prototype.setDrawMode = function () {};
 
 
 //
@@ -2670,8 +2667,64 @@ _p.setBoundingHeight = _p.setHeight;
 //
 _p = cc.Scheduler.prototype;
 _p.unscheduleUpdateForTarget = _p.unscheduleUpdate;
-_p.unscheduleAllCallbacksForTarget = _p.unscheduleAllForTarget;
+_p.unscheduleAllCallbacksForTarget = function (target) {
+    this.unschedule(target.__instanceId + "", target);
+};
+_p._schedule = _p.schedule;
+_p.schedule = function (callback, target, interval, repeat, delay, paused, key) {
+    var isSelector = false;
+    if(typeof callback !== "function"){
+        var selector = callback;
+        isSelector = true;
+    }
+    if(isSelector === false){
+        //callback, target, interval, repeat, delay, paused, key
+        //callback, target, interval, paused, key
+        if(arguments.length === 4 || arguments.length === 5) {
+            key = delay;
+            paused = repeat;
+            delay = 0;
+            repeat = cc.REPEAT_FOREVER;
+        }
+    }else{
+        //selector, target, interval, repeat, delay, paused
+        //selector, target, interval, paused
+        if(arguments.length === 4){
+            paused = repeat;
+            repeat = cc.REPEAT_FOREVER;
+            delay = 0;
+        }
+    }
+    if (key === undefined) {
+        key = target.__instanceId + "";
+    }
+    this._schedule(callback, target, interval, repeat, delay, paused, key);
+}
 
+
+cc._NodeGrid = cc.NodeGrid;
+cc.NodeGrid = function(rect){
+    if (!(this instanceof cc.NodeGrid)){
+        cc.error("NodeGrid's constructor can not be called as a function, please use 'new cc.NodeGrid()'");
+        return;
+    }
+
+    if (rect) {
+        return cc._NodeGrid.create(rect);
+    }
+    else {
+        return cc._NodeGrid.create();
+    }
+}
+
+cc.NodeGrid.create = function(rect){
+    if (rect) {
+        return cc._NodeGrid.create(rect);
+    }
+    else {
+        return cc._NodeGrid.create();
+    }
+}
 
 //
 // cc.BlendFunc
@@ -2713,6 +2766,38 @@ cc.defineGetterSetter(cc.BlendFunc, "ALPHA_NON_PREMULTIPLIED", cc.BlendFunc._alp
 /** @expose */
 cc.BlendFunc.ADDITIVE;
 cc.defineGetterSetter(cc.BlendFunc, "ADDITIVE", cc.BlendFunc._additive);
+
+cc.GLProgram.prototype.setUniformLocationWithMatrix2fv = function(){
+    var tempArray = Array.prototype.slice.call(arguments);
+    tempArray = Array.prototype.concat.call(tempArray, 2);
+    this.setUniformLocationWithMatrixfvUnion.apply(this, tempArray);
+};
+
+cc.GLProgram.prototype.setUniformLocationWithMatrix3fv = function(){
+    var tempArray = Array.prototype.slice.call(arguments);
+    tempArray = Array.prototype.concat.call(tempArray, 3);
+    this.setUniformLocationWithMatrixfvUnion.apply(this, tempArray);
+};
+cc.GLProgram.prototype.setUniformLocationWithMatrix4fv = function(){
+    var tempArray = Array.prototype.slice.call(arguments);
+    tempArray = Array.prototype.concat.call(tempArray, 4);
+    this.setUniformLocationWithMatrixfvUnion.apply(this, tempArray);
+};
+
+
+//
+// Script Component
+//
+cc._ComponentJS = cc.ComponentJS;
+cc._ComponentJS.extend = cc.Class.extend;
+cc.ComponentJS = function (filename) {
+    var comp = cc._ComponentJS.create(filename);
+    var res = comp.getScriptObject();
+    return res;
+};
+cc.ComponentJS.extend = function (prop) {
+    return cc._ComponentJS.extend(prop);
+};
 
 
 //

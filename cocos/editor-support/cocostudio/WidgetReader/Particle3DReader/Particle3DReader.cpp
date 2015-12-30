@@ -57,7 +57,7 @@ namespace cocostudio
     {
         if (!_instanceParticle3DReader)
         {
-            _instanceParticle3DReader = new Particle3DReader();
+            _instanceParticle3DReader = new (std::nothrow) Particle3DReader();
         }
         
         return _instanceParticle3DReader;
@@ -147,14 +147,10 @@ namespace cocostudio
         auto fileData = options->fileData();
         std::string path = fileData->path()->c_str();
         
-        ParticleSystem3D* ret = NULL;
-        if(!FileUtils::getInstance()->isFileExist(path))
+        PUParticleSystem3D* ret = PUParticleSystem3D::create();
+        if (FileUtils::getInstance()->isFileExist(path))
         {
-            ret = PUParticleSystem3D::create();
-        }
-        else
-        {
-            ret = PUParticleSystem3D::create(path);
+            ret->initWithFilePath(path);
         }
         
         setPropsWithFlatBuffers(ret, particle3DOptions);

@@ -295,14 +295,11 @@ void DataReaderHelper::addDataFromFile(const std::string& filePath)
         basefilePath = "";
     }
 
-
-    std::string filePathStr =  filePath;
-    size_t startPos = filePathStr.find_last_of(".");
-    std::string str = &filePathStr[startPos];
+    std::string fileExtension = cocos2d::FileUtils::getInstance()->getFileExtension(filePath);
 
     // Read content from file
     std::string fullPath = FileUtils::getInstance()->fullPathForFilename(filePath);
-    bool isbinaryfilesrc = str==".csb";
+    bool isbinaryfilesrc = fileExtension == ".csb";
     std::string filemode("r");
     if(isbinaryfilesrc)
         filemode += "b";
@@ -314,14 +311,14 @@ void DataReaderHelper::addDataFromFile(const std::string& filePath)
     _dataReaderHelper->_getFileMutex.unlock();
     
     DataInfo dataInfo;
-    dataInfo.filename = filePathStr;
+    dataInfo.filename = filePath;
     dataInfo.asyncStruct = nullptr;
     dataInfo.baseFilePath = basefilePath;
-    if (str == ".xml")
+    if (fileExtension == ".xml")
     {
         DataReaderHelper::addDataFromCache(contentStr, &dataInfo);
     }
-    else if(str == ".json" || str == ".ExportJson")
+    else if(fileExtension == ".json" || fileExtension == ".exportjson")
     {
         DataReaderHelper::addDataFromJsonCache(contentStr, &dataInfo);
     }
@@ -376,7 +373,7 @@ void DataReaderHelper::addDataFromFileAsync(const std::string& imagePath, const 
     if (_asyncStructQueue == nullptr)
     {
         _asyncStructQueue = new std::queue<AsyncStruct *>();
-        _dataQueue = new std::queue<DataInfo *>();
+        _dataQueue = new (std::nothrow) std::queue<DataInfo *>();
 
 		// create a new thread to load images
 		_loadingThread = new std::thread(&DataReaderHelper::loadData, this);
@@ -408,13 +405,10 @@ void DataReaderHelper::addDataFromFileAsync(const std::string& imagePath, const 
     data->imagePath = imagePath;
     data->plistPath = plistPath;
 
-    std::string filePathStr =  filePath;
-    size_t startPos = filePathStr.find_last_of(".");
-    std::string str = &filePathStr[startPos];
-
+    std::string fileExtension = cocos2d::FileUtils::getInstance()->getFileExtension(filePath);
     std::string fullPath = FileUtils::getInstance()->fullPathForFilename(filePath);
 
-    bool isbinaryfilesrc = str==".csb";
+    bool isbinaryfilesrc = fileExtension == ".csb";
     std::string filereadmode("r");
     if (isbinaryfilesrc) {
         filereadmode += "b";
@@ -435,11 +429,11 @@ void DataReaderHelper::addDataFromFileAsync(const std::string& imagePath, const 
     // fix memory leak for v3.3
     free(pBytes);
     
-    if (str == ".xml")
+    if (fileExtension == ".xml")
     {
         data->configType = DragonBone_XML;
     }
-    else if(str == ".json" || str == ".ExportJson")
+    else if(fileExtension == ".json" || fileExtension == ".exportjson")
     {
         data->configType = CocoStudio_JSON;
     }
@@ -815,7 +809,7 @@ MovementData *DataReaderHelper::decodeMovement(tinyxml2::XMLElement *movementXML
 
 
         tinyxml2::XMLElement *parentXml = nullptr;
-        if (parentName.length() != 0)
+        if (!parentName.empty())
         {
             parentXml = movementXML->FirstChildElement(BONE);
 
@@ -1650,7 +1644,7 @@ FrameData *DataReaderHelper::decodeFrame(const rapidjson::Value& json, DataInfo 
     int length = DICTOOL->getArrayCount_json(json, A_EASING_PARAM);
     if (length != 0)
     {
-        frameData->easingParams = new float[length];
+        frameData->easingParams = new (std::nothrow) float[length];
         frameData->easingParamNumber = length;
         
         for (int i = 0; i < length; i++)
@@ -2390,7 +2384,7 @@ void DataReaderHelper::decodeNode(BaseData *node, const rapidjson::Value& json, 
                 int count = pFrameDataArray[i].GetChildNum();
                 if (count != 0 )
                 {
-                    frameData->easingParams = new float[count];
+                    frameData->easingParams = new (std::nothrow) float[count];
                     stExpCocoNode *pFrameData = pFrameDataArray[i].GetChildArray(cocoLoader);
                     for (int ii = 0; ii < count; ++ii)
                     {

@@ -47,7 +47,7 @@
                 ]
              },
             {
-                "from": "tools/simulator/frameworks/runtime-src/Classes",
+                "from": "cocos/scripting/js-bindings/manual",
                 "to": "frameworks/runtime-src/Classes",
                 "include": [
                     "js_module_register.h"
@@ -82,7 +82,6 @@
                 "from": "tools/simulator/frameworks/runtime-src/proj.win32/",
                 "to": "frameworks/runtime-src/proj.win32/",
                 "include": [
-                    "build-cfg.json",
                     "game.rc",
                     "main.cpp",
                     "main.h",

@@ -16,11 +16,15 @@
 * See the License for the specific language governing permissions and limitations under the License.
 */
 
+#include "base/ccMacros.h"
 #include "platform/CCPlatformConfig.h"
 
 #if CC_TARGET_PLATFORM == CC_PLATFORM_WINRT
 
 #include "AudioEngine-winrt.h"
+#include "platform/CCFileUtils.h"
+#include "base/CCDirector.h"
+#include "base/CCScheduler.h"
 
 using namespace cocos2d;
 using namespace cocos2d::experimental;
@@ -45,7 +49,7 @@ bool AudioEngineImpl::init()
     return ret;
 }
 
-AudioCache* AudioEngineImpl::preload(const std::string& filePath)
+AudioCache* AudioEngineImpl::preload(const std::string& filePath, std::function<void(bool)> callback)
 {
     AudioCache* audioCache = nullptr;
     do 
@@ -54,20 +58,23 @@ AudioCache* AudioEngineImpl::preload(const std::string& filePath)
         if (it == _audioCaches.end()) {
             FileFormat fileFormat = FileFormat::UNKNOWN;
 
-            auto ext = filePath.substr(filePath.rfind('.'));
-            transform(ext.begin(), ext.end(), ext.begin(), tolower);
+            std::string fileExtension = FileUtils::getInstance()->getFileExtension(filePath);
 
-            if (ext.compare(".wav") == 0){
+            if (fileExtension == ".wav")
+            {
                 fileFormat = FileFormat::WAV;
             }
-            else if (ext.compare(".ogg") == 0){
+            else if (fileExtension == ".ogg")
+            {
                 fileFormat = FileFormat::OGG;
             }
-            else if (ext.compare(".mp3") == 0){
+            else if (fileExtension == ".mp3")
+            {
                 fileFormat = FileFormat::MP3;
             }
-            else{
-                log("unsupported media type:%s\n", ext.c_str());
+            else
+            {
+                log("Unsupported media type file: %s\n", filePath.c_str());
                 break;
             }
 
@@ -78,17 +85,30 @@ AudioCache* AudioEngineImpl::preload(const std::string& filePath)
             audioCache->_fileFullPath = fullPath;
             AudioEngine::addTask(std::bind(&AudioCache::readDataTask, audioCache));
         }
-        else {
+        else 
+        {
             audioCache = &it->second;
         }
     } while (false);
+
+    if (callback)
+    {
+        if (audioCache)
+        {
+            audioCache->addLoadCallback(callback);
+        } 
+        else
+        {
+            callback(false);
+        }
+    }
 
     return audioCache;
 }
 
 int AudioEngineImpl::play2d(const std::string &filePath, bool loop, float volume)
 {
-    auto audioCache = preload(filePath);
+    auto audioCache = preload(filePath, nullptr);
     if (audioCache == nullptr)
     {
         return AudioEngine::INVALID_AUDIO_ID;
@@ -97,7 +117,7 @@ int AudioEngineImpl::play2d(const std::string &filePath, bool loop, float volume
     auto player = &_audioPlayers[_currentAudioID];
     player->_loop = loop;
     player->_volume = volume;
-    audioCache->addCallback(std::bind(&AudioEngineImpl::_play2d, this, audioCache, _currentAudioID));
+    audioCache->addPlayCallback(std::bind(&AudioEngineImpl::_play2d, this, audioCache, _currentAudioID));
 
     if (_lazyInitLoop) {
         _lazyInitLoop = false;

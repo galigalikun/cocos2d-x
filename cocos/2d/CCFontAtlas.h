@@ -41,6 +41,7 @@ class Font;
 class Texture2D;
 class EventCustom;
 class EventListenerCustom;
+class FontFreeType;
 
 struct FontLetterDefinition
 {
@@ -108,11 +109,28 @@ public:
      void setAliasTexParameters();
 
 protected:
-    void relaseTextures();
+    void releaseTextures();
+
+    /** @deprecated Use method releaseTextures() instead */
+    CC_DEPRECATED_ATTRIBUTE void relaseTextures();
+
+    void findNewCharacters(const std::u16string& u16Text, std::unordered_map<unsigned short, unsigned short>& charCodeMap);
+
+    void conversionU16TOGB2312(const std::u16string& u16Text, std::unordered_map<unsigned short, unsigned short>& charCodeMap);
+
+    /**
+     * Scale each font letter by scaleFactor.
+     *
+     * @param scaleFactor A float scale factor for scaling font letter info.
+     */
+    void scaleFontLetterDefinition(float scaleFactor);
+
     std::unordered_map<ssize_t, Texture2D*> _atlasTextures;
     std::unordered_map<char16_t, FontLetterDefinition> _letterDefinitions;
     float _lineHeight;
     Font* _font;
+    FontFreeType* _fontFreeType;
+    void* _iconv;
 
     // Dynamic GlyphCollection related stuff
     int _currentPage;
@@ -120,7 +138,8 @@ protected:
     int _currentPageDataSize;
     float _currentPageOrigX;
     float _currentPageOrigY;
-    float _letterPadding;
+    int _letterPadding;
+    int _letterEdgeExtend;
 
     int _fontAscender;
     EventListenerCustom* _rendererRecreatedListener;

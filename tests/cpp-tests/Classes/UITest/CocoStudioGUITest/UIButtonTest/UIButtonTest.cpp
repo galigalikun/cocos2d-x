@@ -20,6 +20,7 @@ UIButtonTests::UIButtonTests()
     ADD_TEST_CASE(UIButtonNormalDefaultTest);
     ADD_TEST_CASE(UIButtonDisableDefaultTest);
     ADD_TEST_CASE(UIButtonCloneTest);
+    ADD_TEST_CASE(Issue12249);
 }
 
 // UIButtonTest
@@ -74,7 +75,15 @@ bool UIButtonTest::init()
 
         _uiLayer->addChild(imageView);
 
+        _button = button;
 
+        TTFConfig ttfConfig("fonts/arial.ttf", 15);
+        auto label1 = Label::createWithTTF(ttfConfig, "Print Resources");
+        auto item1 = MenuItemLabel::create(label1, CC_CALLBACK_1(UIButtonTest::printWidgetResources, this));
+        item1->setPosition(Vec2(VisibleRect::left().x + 60, VisibleRect::bottom().y + item1->getContentSize().height * 3));
+        auto pMenu1 = Menu::create(item1, nullptr);
+        pMenu1->setPosition(Vec2(0, 0));
+        this->addChild(pMenu1, 10);
 
         return true;
     }
@@ -116,6 +125,16 @@ void UIButtonTest::touchEvent(Ref *pSender, Widget::TouchEventType type)
     }
 }
 
+void UIButtonTest::printWidgetResources(cocos2d::Ref* sender)
+{
+    cocos2d::ResourceData normalFileName = _button->getNormalFile();
+    CCLOG("normalFileName  Name : %s, Type: %d", normalFileName.file.c_str(), normalFileName.type);
+    cocos2d::ResourceData clickedFileName = _button->getPressedFile();
+    CCLOG("clickedFileName  Name : %s, Type: %d", clickedFileName.file.c_str(), clickedFileName.type);
+    cocos2d::ResourceData disabledFileName = _button->getDisabledFile();
+    CCLOG("disabledFileName  Name : %s, Type: %d", disabledFileName.file.c_str(), disabledFileName.type);
+}
+
 
 // UIButtonTest_Scale9
 UIButtonTest_Scale9::UIButtonTest_Scale9()
@@ -152,8 +171,12 @@ bool UIButtonTest_Scale9::init()
         Button* button = Button::create("cocosui/button.png", "cocosui/buttonHighlighted.png");
         // open scale9 render
         button->setScale9Enabled(true);
-        button->setPosition(Vec2(widgetSize.width / 2.0f, widgetSize.height / 2.0f));
         button->setContentSize(Size(150, 70));
+        button->setPosition(Vec2(-button->getContentSize().width - 10, widgetSize.height / 2.0f));
+        auto moveBy = MoveBy::create(1.0, Vec2(widgetSize.width/2, 0));
+        auto moveByReverse = moveBy->reverse()->clone();
+        button->runAction(RepeatForever::create(
+                                Sequence::create(moveBy,moveByReverse, NULL)));
         button->setPressedActionEnabled(true);
         button->addTouchEventListener(CC_CALLBACK_2(UIButtonTest_Scale9::touchEvent, this));
         _uiLayer->addChild(button);
@@ -1084,13 +1107,84 @@ bool UIButtonCloneTest::init()
         buttonCopy->setPosition(Vec2(widgetSize.width / 2.0f + 80,
                                      widgetSize.height / 2.0f + 40));
         this->addChild(buttonCopy);
-
+        
+        
+        
+        auto buttonScale9Copy = (Button*)button->clone();
+        buttonScale9Copy->setPosition(button->getPosition() + Vec2(0, -60));
+        buttonScale9Copy->setScale9Enabled(true);
+        buttonScale9Copy->setContentSize(button->getContentSize() * 1.5);
+        this->addChild(buttonScale9Copy);
+        
+        
+        auto buttonScale9Copy2 = (Button*)buttonScale9Copy->clone();
+        buttonScale9Copy2->setPosition(buttonCopy->getPosition() + Vec2(0, -60));
+        buttonScale9Copy2->setScale9Enabled(true);
+        buttonScale9Copy2->setContentSize(buttonCopy->getContentSize() * 1.5);
+        this->addChild(buttonScale9Copy2);
+        
+        
         CCASSERT(button->getTitleRenderer() == nullptr,
                  "Original Button title render must be nullptr ");
 
         CCASSERT(buttonCopy->getTitleRenderer() == nullptr,
                  "Copied Button title render must be nullptr ");
 
+        return true;
+    }
+    return false;
+}
+
+// https://github.com/cocos2d/cocos2d-x/issues/12249
+Issue12249::Issue12249()
+: _displayValueLabel(nullptr)
+{
+    
+}
+
+bool Issue12249::init()
+{
+    if (UIScene::init())
+    {
+        Size widgetSize = _widget->getContentSize();
+        
+        // Add a label in which the button events will be displayed
+        _displayValueLabel = Text::create("Test Issue 12249", "fonts/Marker Felt.ttf",32);
+        _displayValueLabel->setAnchorPoint(Vec2(0.5f, -1.0f));
+        _displayValueLabel->setPosition(Vec2(widgetSize.width / 2.0f,
+                                             widgetSize.height / 2.0f));
+        _uiLayer->addChild(_displayValueLabel);
+        
+        // Add the alert
+        Text* alert = Text::create("This test case two buttons should seem to be same!",
+                                   "fonts/Marker Felt.ttf",20);
+        alert->setColor(Color3B(159, 168, 176));
+        
+        alert->setPosition(Vec2(widgetSize.width / 2.0f,
+                                widgetSize.height / 2.0f
+                                - alert->getContentSize().height * 2.0f));
+        
+        _uiLayer->addChild(alert);
+        
+        // Create the button 1
+        Button* button = nullptr, *button2 = nullptr;
+        float btnWidth = 100;
+        button = Button::create("cocosui/button.png", "cocosui/buttonHighlighted.png");
+        button->setScale9Enabled(true);
+        button->setContentSize(Size(btnWidth, button->getContentSize().height));
+        button->setTitleText("Scale9 Button 1");
+        button->setPosition(Vec2(widgetSize.width / 2.0f - btnWidth, widgetSize.height / 2.0f));
+        _uiLayer->addChild(button);
+
+        // create button 2, load texture after button creation
+        button2 = Button::create();
+        button2->setScale9Enabled(true);
+        button2->loadTextures("cocosui/button.png", "cocosui/buttonHighlighted.png", "");
+        button2->setContentSize(Size(btnWidth, button2->getContentSize().height));
+        button2->setTitleText("Scale9 Button 2");
+        button2->setPosition(Vec2(widgetSize.width / 2.0f + btnWidth, widgetSize.height / 2.0f));
+        _uiLayer->addChild(button2);
+        
         return true;
     }
     return false;

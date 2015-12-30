@@ -182,8 +182,7 @@ bool Bundle3D::load(const std::string& path)
     getModelRelativePath(path);
 
     bool ret = false;
-    std::string ext = path.substr(path.length() - 4, 4);
-    std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
+    std::string ext = FileUtils::getInstance()->getFileExtension(path);
     if (ext == ".c3t")
     {
         _isBinary = false;
@@ -1049,7 +1048,7 @@ bool Bundle3D::loadJson(const std::string& path)
     if (_jsonReader.ParseInsitu<0>(_jsonBuffer).HasParseError())
     {
         clear();
-        CCASSERT(false, "Parse json failed");
+        CCLOG("Parse json failed in Bundle3D::loadJson function");
         return false;
     }
 
@@ -1132,7 +1131,7 @@ bool Bundle3D::loadBinary(const std::string& path)
 bool Bundle3D::loadMeshDataJson_0_1(MeshDatas& meshdatas)
 {
     const rapidjson::Value& mesh_data_array = _jsonReader[MESH];
-    MeshData* meshdata= new   MeshData();
+    MeshData* meshdata= new (std::nothrow) MeshData();
     const rapidjson::Value& mesh_data_val = mesh_data_array[(rapidjson::SizeType)0];
 
     const rapidjson::Value& mesh_data_body_array = mesh_data_val[DEFAULTPART];
@@ -1180,7 +1179,7 @@ bool Bundle3D::loadMeshDataJson_0_1(MeshDatas& meshdatas)
 
 bool Bundle3D::loadMeshDataJson_0_2(MeshDatas& meshdatas)
 {
-    MeshData* meshdata= new   MeshData();
+    MeshData* meshdata= new (std::nothrow) MeshData();
     const rapidjson::Value& mesh_array = _jsonReader[MESH];
     const rapidjson::Value& mesh_array_0 = mesh_array[(rapidjson::SizeType)0];
 
@@ -1262,7 +1261,7 @@ bool Bundle3D::loadSkinDataJson(SkinData* skindata)
         skindata->inverseBindPoseMatrices.push_back(mat_bind_pos);
     }
 
-    // set root bone infomation
+    // set root bone information
     const rapidjson::Value& skin_data_1 = skin_data_array[1];
 
     // parent and child relationship map
@@ -1816,7 +1815,7 @@ NodeData* Bundle3D::parseNodesRecursivelyBinary(bool& skeleton, bool singleSprit
     bool skeleton_;
     if (_binaryReader.read(&skeleton_, 1, 1) != 1)
     {
-        CCLOG("warning: Failed to read is sleleton");
+        CCLOG("warning: Failed to read is skeleton");
         return nullptr;
     }
     if (skeleton_)
@@ -2103,6 +2102,14 @@ unsigned int Bundle3D::parseGLProgramAttribute(const std::string& str)
     {
         return GLProgram::VERTEX_ATTRIB_BLEND_INDEX;
     }
+    else if (str == "VERTEX_ATTRIB_TANGENT")
+    {
+        return GLProgram::VERTEX_ATTRIB_TANGENT;
+    }
+    else if (str == "VERTEX_ATTRIB_BINORMAL")
+    {
+        return GLProgram::VERTEX_ATTRIB_BINORMAL;
+    }
     else
     {
         CCASSERT(false, "Wrong Attribute type");
@@ -2151,8 +2158,7 @@ std::vector<Vec3> Bundle3D::getTrianglesList(const std::string& path)
         return trianglesList;
     
     auto bundle = Bundle3D::createBundle();
-    std::string ext = path.substr(path.length() - 4, 4);
-    std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
+    std::string ext = FileUtils::getInstance()->getFileExtension(path);
     MeshDatas meshs;
     if (ext == ".obj")
     {

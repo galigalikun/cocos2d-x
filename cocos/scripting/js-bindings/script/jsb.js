@@ -79,7 +79,7 @@ if (cc.BuilderAnimationManager) {
     require('script/jsb_cocosbuilder.js');
 }
 
-if (jsb.fileUtils.isFileExist('jsb_pluginx.js')) {
+if (jsb.fileUtils.isFileExist('jsb_pluginx.js') || jsb.fileUtils.isFileExist('jsb_pluginx.jsc')) {
     if (cc.sys.os == cc.sys.OS_IOS || cc.sys.os == cc.sys.OS_ANDROID) {
         require('jsb_pluginx.js');
     }
@@ -101,9 +101,11 @@ if (jsb.Physics3DObject) {
     require("script/physics3d/jsb_physics3d.js");
 }
 
-if(jsb.NavMeshAgent) {
+if (jsb.NavMeshAgent) {
     require("script/navmesh/jsb_navmesh.js");
 }
+
+require("script/jsb_audioengine.js");
 
 require('script/jsb_loaders.js');
 require('script/jsb_pool.js');

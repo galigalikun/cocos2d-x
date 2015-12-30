@@ -41,12 +41,16 @@
 /** TODO: Missing doc - What does "CustomTextFieldFormatter" do?
  */
 @interface CustomTextFieldFormatter : NSFormatter
+{
+    int _maximumLength;
+}
 
 @property (nonatomic, assign) int maximumLength;
 
 @end
 
 @implementation CustomTextFieldFormatter
+@synthesize maximumLength = _maximumLength;
 
 - (instancetype)init
 {
@@ -88,6 +92,16 @@
 #pragma mark - UIEditBox mac implementation
 
 @interface UIEditBoxImplMac : NSObject <NSTextFieldDelegate>
+{
+    NSTextField* _textField;
+    NSSecureTextField* _secureTextField;
+    NSMutableDictionary* _placeholderAttributes;
+    NSWindow* _window;
+
+    BOOL _editState;
+    BOOL _secure;
+    void* _editBox;
+}
 
 @property (nonatomic, retain) NSTextField* textField;
 @property (nonatomic, retain) NSSecureTextField *secureTextField;
@@ -110,6 +124,13 @@
 
 
 @implementation UIEditBoxImplMac
+@synthesize textField = _textField;
+@synthesize secureTextField = _secureTextField;
+@synthesize placeholderAttributes = _placeholderAttributes;
+@synthesize window = _window;
+@synthesize editState = _editState;
+@synthesize secure = _secure;
+@synthesize editBox = _editBox;
 
 - (instancetype)initWithFrame:(NSRect)frameRect editBox:(void *)editBox
 {
@@ -352,14 +373,40 @@ bool EditBoxImplMac::initWithSize(const Size& size)
     
     return true;
 }
-
-void EditBoxImplMac::setFont(const char* pFontName, int fontSize)
+    
+NSFont* EditBoxImplMac::constructFont(const char *fontName, int fontSize)
 {
-    NSString * fntName = [NSString stringWithUTF8String:pFontName];
+    NSString * fntName = [NSString stringWithUTF8String:fontName];
     float retinaFactor = _inRetinaMode ? 2.0f : 1.0f;
     auto glview = cocos2d::Director::getInstance()->getOpenGLView();
     float scaleFactor = glview->getScaleX();
-    NSFont *textFont = [NSFont fontWithName:fntName size:fontSize  * scaleFactor / retinaFactor];
+    
+    if (fontSize == -1)
+    {
+        NSRect frameRect = [_sysEdit.textField frame];
+        fontSize = frameRect.size.height*2/3;
+    }
+    else
+    {
+        fontSize = fontSize * scaleFactor / retinaFactor;
+    }
+    
+    NSFont *textFont = nil;
+    if (strlen(fontName) == 0)
+    {
+        textFont = [NSFont systemFontOfSize:fontSize];
+    }
+    else
+    {
+        textFont = [NSFont fontWithName:fntName size:fontSize];
+    }
+    
+    return textFont;
+}
+
+void EditBoxImplMac::setFont(const char* pFontName, int fontSize)
+{
+    NSFont* textFont = constructFont(pFontName, fontSize);
     if (textFont != nil) {
         [_sysEdit.textField setFont:textFont];
         [_sysEdit.secureTextField setFont:textFont];
@@ -368,18 +415,14 @@ void EditBoxImplMac::setFont(const char* pFontName, int fontSize)
 
 void EditBoxImplMac::setPlaceholderFont(const char* pFontName, int fontSize)
 {
-    NSString *fontName = [NSString stringWithUTF8String:pFontName];
-    float retinaFactor = _inRetinaMode ? 2.0f : 1.0f;
-    auto glview = cocos2d::Director::getInstance()->getOpenGLView();
-    float scaleFactor = glview->getScaleX();
-    NSFont *font = [NSFont fontWithName:fontName size:fontSize  * scaleFactor / retinaFactor];
+    NSFont *textFont = constructFont(pFontName, fontSize);
     
-    if (!font) {
+    if (!textFont) {
         CCLOGWARN("Font not found: %s", pFontName);
         return;
     }
     
-    [_sysEdit.placeholderAttributes setObject:font forKey:NSFontAttributeName];
+    [_sysEdit.placeholderAttributes setObject:textFont forKey:NSFontAttributeName];
     
     /* reload placeholder */
     const char *placeholder = [_sysEdit.textField.cell placeholderAttributedString].string.UTF8String;
@@ -438,8 +481,8 @@ void EditBoxImplMac::setInputFlag(EditBox::InputFlag inputFlag)
         case EditBox::InputFlag::INITIAL_CAPS_SENTENCE:
             CCLOGWARN("INITIAL_CAPS_SENTENCE not implemented");
             break;
-        case EditBox::InputFlag::INTIAL_CAPS_ALL_CHARACTERS:
-            CCLOGWARN("INTIAL_CAPS_ALL_CHARACTERS not implemented");
+        case EditBox::InputFlag::INITIAL_CAPS_ALL_CHARACTERS:
+            CCLOGWARN("INITIAL_CAPS_ALL_CHARACTERS not implemented");
             break;
         case EditBox::InputFlag::SENSITIVE:
             CCLOGWARN("SENSITIVE not implemented");
@@ -494,7 +537,7 @@ NSPoint EditBoxImplMac::convertDesignCoordToScreenCoord(const Vec2& designCoord,
     Vec2 visiblePos = Vec2(designCoord.x * eglView->getScaleX(), designCoord.y * eglView->getScaleY());
     Vec2 screenGLPos = visiblePos + eglView->getViewPortRect().origin;
     
-    //TODO: I don't know why here needs to substract `height`.
+    //TODO: I don't know why here needs to subtract `height`.
     NSPoint screenPos = NSMakePoint(screenGLPos.x, screenGLPos.y-height);
     
     if (bInRetinaMode) {
@@ -550,7 +593,7 @@ void EditBoxImplMac::setAnchorPoint(const Vec2& anchorPoint)
     setPosition(_position);
 }
 
-void EditBoxImplMac::visit(void)
+void EditBoxImplMac::draw(Renderer *renderer, const Mat4 &transform, uint32_t flags)
 {
     
 }
