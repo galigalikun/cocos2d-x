@@ -11,16 +11,6 @@
 -- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
         
 --------------------------------
--- add a frame end call back to animation's end frame<br>
--- param animationName  @addFrameEndCallFunc, make the animationName as funcKey<br>
--- param func the callback function
--- @function [parent=#ActionTimeline] setAnimationEndCallFunc 
--- @param self
--- @param #string animationName
--- @param #function func
--- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
-        
---------------------------------
 --  add Timeline to ActionTimeline 
 -- @function [parent=#ActionTimeline] addTimeline 
 -- @param self
@@ -65,13 +55,6 @@
 -- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
         
 --------------------------------
---  Last frame callback will call when arriving last frame 
--- @function [parent=#ActionTimeline] setLastFrameCallFunc 
--- @param self
--- @param #function listener
--- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
-        
---------------------------------
 -- 
 -- @function [parent=#ActionTimeline] getTimelines 
 -- @param self
@@ -96,18 +79,6 @@
 --  Resume the animation. 
 -- @function [parent=#ActionTimeline] resume 
 -- @param self
--- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
-        
---------------------------------
---  add a callback function after played frameIndex<br>
--- param frameIndex the frame index call back after<br>
--- param funcKey for identity the callback function<br>
--- param func the callback function
--- @function [parent=#ActionTimeline] addFrameEndCallFunc 
--- @param self
--- @param #int frameIndex
--- @param #string funcKey
--- @param #function func
 -- @return ActionTimeline#ActionTimeline self (return value: ccs.ActionTimeline)
         
 --------------------------------
