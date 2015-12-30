@@ -20465,53 +20465,6 @@ int lua_cocos2dx_PolygonInfo_getArea(lua_State* tolua_S)
 
     return 0;
 }
-int lua_cocos2dx_PolygonInfo_getTriaglesCount(lua_State* tolua_S)
-{
-    int argc = 0;
-    cocos2d::PolygonInfo* cobj = nullptr;
-    bool ok  = true;
-
-#if COCOS2D_DEBUG >= 1
-    tolua_Error tolua_err;
-#endif
-
-
-#if COCOS2D_DEBUG >= 1
-    if (!tolua_isusertype(tolua_S,1,"cc.PolygonInfo",0,&tolua_err)) goto tolua_lerror;
-#endif
-
-    cobj = (cocos2d::PolygonInfo*)tolua_tousertype(tolua_S,1,0);
-
-#if COCOS2D_DEBUG >= 1
-    if (!cobj) 
-    {
-        tolua_error(tolua_S,"invalid 'cobj' in function 'lua_cocos2dx_PolygonInfo_getTriaglesCount'", nullptr);
-        return 0;
-    }
-#endif
-
-    argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_PolygonInfo_getTriaglesCount'", nullptr);
-            return 0;
-        }
-        const unsigned int ret = cobj->getTriaglesCount();
-        tolua_pushnumber(tolua_S,(lua_Number)ret);
-        return 1;
-    }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.PolygonInfo:getTriaglesCount",argc, 0);
-    return 0;
-
-#if COCOS2D_DEBUG >= 1
-    tolua_lerror:
-    tolua_error(tolua_S,"#ferror in function 'lua_cocos2dx_PolygonInfo_getTriaglesCount'.",&tolua_err);
-#endif
-
-    return 0;
-}
 int lua_cocos2dx_PolygonInfo_getVertCount(lua_State* tolua_S)
 {
     int argc = 0;
@@ -20555,6 +20508,53 @@ int lua_cocos2dx_PolygonInfo_getVertCount(lua_State* tolua_S)
 #if COCOS2D_DEBUG >= 1
     tolua_lerror:
     tolua_error(tolua_S,"#ferror in function 'lua_cocos2dx_PolygonInfo_getVertCount'.",&tolua_err);
+#endif
+
+    return 0;
+}
+int lua_cocos2dx_PolygonInfo_getTrianglesCount(lua_State* tolua_S)
+{
+    int argc = 0;
+    cocos2d::PolygonInfo* cobj = nullptr;
+    bool ok  = true;
+
+#if COCOS2D_DEBUG >= 1
+    tolua_Error tolua_err;
+#endif
+
+
+#if COCOS2D_DEBUG >= 1
+    if (!tolua_isusertype(tolua_S,1,"cc.PolygonInfo",0,&tolua_err)) goto tolua_lerror;
+#endif
+
+    cobj = (cocos2d::PolygonInfo*)tolua_tousertype(tolua_S,1,0);
+
+#if COCOS2D_DEBUG >= 1
+    if (!cobj) 
+    {
+        tolua_error(tolua_S,"invalid 'cobj' in function 'lua_cocos2dx_PolygonInfo_getTrianglesCount'", nullptr);
+        return 0;
+    }
+#endif
+
+    argc = lua_gettop(tolua_S)-1;
+    if (argc == 0) 
+    {
+        if(!ok)
+        {
+            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_PolygonInfo_getTrianglesCount'", nullptr);
+            return 0;
+        }
+        const unsigned int ret = cobj->getTrianglesCount();
+        tolua_pushnumber(tolua_S,(lua_Number)ret);
+        return 1;
+    }
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.PolygonInfo:getTrianglesCount",argc, 0);
+    return 0;
+
+#if COCOS2D_DEBUG >= 1
+    tolua_lerror:
+    tolua_error(tolua_S,"#ferror in function 'lua_cocos2dx_PolygonInfo_getTrianglesCount'.",&tolua_err);
 #endif
 
     return 0;
@@ -20710,8 +20710,8 @@ int lua_register_cocos2dx_PolygonInfo(lua_State* tolua_S)
     tolua_beginmodule(tolua_S,"PolygonInfo");
         tolua_function(tolua_S,"new",lua_cocos2dx_PolygonInfo_constructor);
         tolua_function(tolua_S,"getArea",lua_cocos2dx_PolygonInfo_getArea);
-        tolua_function(tolua_S,"getTriaglesCount",lua_cocos2dx_PolygonInfo_getTriaglesCount);
         tolua_function(tolua_S,"getVertCount",lua_cocos2dx_PolygonInfo_getVertCount);
+        tolua_function(tolua_S,"getTrianglesCount",lua_cocos2dx_PolygonInfo_getTrianglesCount);
         tolua_function(tolua_S,"setQuad",lua_cocos2dx_PolygonInfo_setQuad);
         tolua_function(tolua_S,"setTriangles",lua_cocos2dx_PolygonInfo_setTriangles);
     tolua_endmodule(tolua_S);
@@ -28316,20 +28316,6 @@ int lua_cocos2dx_Properties_getVariable(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 1) 
-    {
-        const char* arg0;
-
-        std::string arg0_tmp; ok &= luaval_to_std_string(tolua_S, 2, &arg0_tmp, "cc.Properties:getVariable"); arg0 = arg0_tmp.c_str();
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getVariable'", nullptr);
-            return 0;
-        }
-        const char* ret = cobj->getVariable(arg0);
-        tolua_pushstring(tolua_S,(const char*)ret);
-        return 1;
-    }
     if (argc == 2) 
     {
         const char* arg0;
@@ -28347,7 +28333,7 @@ int lua_cocos2dx_Properties_getVariable(lua_State* tolua_S)
         tolua_pushstring(tolua_S,(const char*)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getVariable",argc, 1);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getVariable",argc, 2);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -28383,31 +28369,6 @@ int lua_cocos2dx_Properties_getString(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getString'", nullptr);
-            return 0;
-        }
-        const char* ret = cobj->getString();
-        tolua_pushstring(tolua_S,(const char*)ret);
-        return 1;
-    }
-    if (argc == 1) 
-    {
-        const char* arg0;
-
-        std::string arg0_tmp; ok &= luaval_to_std_string(tolua_S, 2, &arg0_tmp, "cc.Properties:getString"); arg0 = arg0_tmp.c_str();
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getString'", nullptr);
-            return 0;
-        }
-        const char* ret = cobj->getString(arg0);
-        tolua_pushstring(tolua_S,(const char*)ret);
-        return 1;
-    }
     if (argc == 2) 
     {
         const char* arg0;
@@ -28425,7 +28386,7 @@ int lua_cocos2dx_Properties_getString(lua_State* tolua_S)
         tolua_pushstring(tolua_S,(const char*)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getString",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getString",argc, 2);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -28461,17 +28422,6 @@ int lua_cocos2dx_Properties_getLong(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getLong'", nullptr);
-            return 0;
-        }
-        long ret = cobj->getLong();
-        tolua_pushnumber(tolua_S,(lua_Number)ret);
-        return 1;
-    }
     if (argc == 1) 
     {
         const char* arg0;
@@ -28486,7 +28436,7 @@ int lua_cocos2dx_Properties_getLong(lua_State* tolua_S)
         tolua_pushnumber(tolua_S,(lua_Number)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getLong",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getLong",argc, 1);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -28966,17 +28916,6 @@ int lua_cocos2dx_Properties_getBool(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getBool'", nullptr);
-            return 0;
-        }
-        bool ret = cobj->getBool();
-        tolua_pushboolean(tolua_S,(bool)ret);
-        return 1;
-    }
     if (argc == 1) 
     {
         const char* arg0;
@@ -29008,7 +28947,7 @@ int lua_cocos2dx_Properties_getBool(lua_State* tolua_S)
         tolua_pushboolean(tolua_S,(bool)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getBool",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getBool",argc, 1);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -29107,17 +29046,6 @@ int lua_cocos2dx_Properties_getType(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getType'", nullptr);
-            return 0;
-        }
-        int ret = (int)cobj->getType();
-        tolua_pushnumber(tolua_S,(lua_Number)ret);
-        return 1;
-    }
     if (argc == 1) 
     {
         const char* arg0;
@@ -29132,7 +29060,7 @@ int lua_cocos2dx_Properties_getType(lua_State* tolua_S)
         tolua_pushnumber(tolua_S,(lua_Number)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getType",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getType",argc, 1);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -29215,17 +29143,6 @@ int lua_cocos2dx_Properties_getInt(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getInt'", nullptr);
-            return 0;
-        }
-        int ret = cobj->getInt();
-        tolua_pushnumber(tolua_S,(lua_Number)ret);
-        return 1;
-    }
     if (argc == 1) 
     {
         const char* arg0;
@@ -29240,7 +29157,7 @@ int lua_cocos2dx_Properties_getInt(lua_State* tolua_S)
         tolua_pushnumber(tolua_S,(lua_Number)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getInt",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getInt",argc, 1);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
@@ -29482,17 +29399,6 @@ int lua_cocos2dx_Properties_getFloat(lua_State* tolua_S)
 #endif
 
     argc = lua_gettop(tolua_S)-1;
-    if (argc == 0) 
-    {
-        if(!ok)
-        {
-            tolua_error(tolua_S,"invalid arguments in function 'lua_cocos2dx_Properties_getFloat'", nullptr);
-            return 0;
-        }
-        double ret = cobj->getFloat();
-        tolua_pushnumber(tolua_S,(lua_Number)ret);
-        return 1;
-    }
     if (argc == 1) 
     {
         const char* arg0;
@@ -29507,7 +29413,7 @@ int lua_cocos2dx_Properties_getFloat(lua_State* tolua_S)
         tolua_pushnumber(tolua_S,(lua_Number)ret);
         return 1;
     }
-    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getFloat",argc, 0);
+    luaL_error(tolua_S, "%s has wrong number of arguments: %d, was expecting %d \n", "cc.Properties:getFloat",argc, 1);
     return 0;
 
 #if COCOS2D_DEBUG >= 1
